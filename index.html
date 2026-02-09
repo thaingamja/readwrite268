@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบประเมินผลนักเรียน (Admin Edition)</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class', // เปิดใช้งาน Dark Mode แบบ Manual Toggle
+    }
+  </script>
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Saraburi:wght@300;400;500;700&display=swap" rel="stylesheet">
+  
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- SheetJS (XLSX) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  
+  <!-- PDFMake -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+
+  <style>
+    body { font-family: 'Saraburi', sans-serif; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    .dark ::-webkit-scrollbar-thumb { background: #4b5563; }
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    
+    /* Transition for smooth toggle */
+    body, div, nav, table, tr, td, th, input, select {
+      transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+    }
+  </style>
+</head>
+<body class="text-slate-800 bg-[#f0f4f8] dark:bg-gray-900 dark:text-gray-200 h-screen flex flex-col">
+  <!-- ================= LOGIN SCREEN ================= -->
+  <div id="loginSection" class="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-blue-900 to-slate-900 p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 w-full max-w-md space-y-6">
+      <div class="text-center">
+        <!-- Custom Logo Image -->
+        <div class="inline-flex items-center justify-center w-40 h-40 bg-blue-100 dark:bg-blue-900 rounded-full mb-4 overflow-hidden border-4 border-white dark:border-gray-700 shadow-md">
+           <img class="w-40 h-45 object-cover" src="https://res.cloudinary.com/gukkghu/image/upload/v1646575846/gukkghu/%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B8%AD%E0%B8%AD%E0%B8%81%E0%B9%81%E0%B8%9A%E0%B8%9A%E0%B8%97%E0%B8%B5%E0%B9%88%E0%B9%84%E0%B8%A1%E0%B9%88%E0%B8%A1%E0%B8%B5%E0%B8%8A%E0%B8%B7%E0%B9%88%E0%B8%AD_aytvpq.png" alt="Logo">
+        </div>
+        <h2 class="text-2xl font-bold text-gray-800 dark:text-white">เข้าสู่ระบบ</h2>
+        <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">ระบบบันทึกคะแนนและประเมินผล</p>
+      </div>
+      <form onsubmit="handleLogin(event)" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ชื่อผู้ใช้งาน</label>
+          <div class="relative">
+            <i class="fa-solid fa-user absolute left-3 top-3 text-gray-400"></i>
+            <input type="text" id="username" required class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 transition-colors">
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">รหัสผ่าน</label>
+          <div class="relative">
+            <i class="fa-solid fa-lock absolute left-3 top-3 text-gray-400"></i>
+            <input type="password" id="password" required class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 transition-colors">
+          </div>
+        </div>
+        <button type="submit" id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg shadow-md transition-all flex justify-center items-center gap-2">
+          <span>เข้าสู่ระบบ</span> <i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </form>
+      <div class="flex justify-center items-center">
+        <p class="text-xs text-slate-400">พัฒนาโดย ธุรการไทยงาม | 2026</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MAIN APP ================= -->
+  <div id="appSection" class="hidden flex-1 flex flex-col h-full">
+    
+    <!-- Navbar -->
+    <nav class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 px-4 py-3 sticky top-0 z-30">
+      <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+        
+        <!-- Left: Info -->
+        <div class="flex items-center gap-3 w-full md:w-auto">
+          <div id="roleIcon" class="bg-blue-600 text-white w-10 h-10 rounded-lg flex items-center justify-center shadow">
+            <i class="fa-solid fa-user-graduate text-lg"></i>
+          </div>
+          <div>
+            <h1 class="font-bold text-lg text-gray-800 dark:text-white leading-tight">บันทึกผลการเรียน</h1>
+            <p class="text-xs text-gray-500 dark:text-gray-400" id="teacherInfo">...</p>
+          </div>
+        </div>
+
+        <!-- Center: Admin Selector & Tabs -->
+        <div class="flex flex-col sm:flex-row gap-2 items-center">
+          <!-- Admin Room Selector -->
+          <div id="adminControls" class="hidden">
+            <select id="roomSelector" onchange="switchRoom(this.value)" class="bg-blue-50 dark:bg-gray-700 border border-blue-200 dark:border-gray-600 text-blue-800 dark:text-blue-300 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2 font-bold">
+              <!-- Options injected by JS -->
+            </select>
+          </div>
+
+          <div class="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
+            <button onclick="switchTab('entry')" id="tab-entry" class="px-4 py-1.5 rounded-md text-sm font-bold transition-all bg-white dark:bg-gray-600 text-blue-600 dark:text-white shadow-sm">
+              <i class="fa-solid fa-pen-to-square mr-1"></i> บันทึก
+            </button>
+            <button onclick="switchTab('stats')" id="tab-stats" class="px-4 py-1.5 rounded-md text-sm font-bold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-all">
+              <i class="fa-solid fa-chart-pie mr-1"></i> สรุป
+            </button>
+          </div>
+        </div>
+
+        <!-- Right: Actions -->
+        <div class="w-full md:w-auto flex justify-end gap-1">
+          <!-- Help Button -->
+          <button onclick="showHelp()" class="text-gray-400 hover:text-green-500 p-2 transition rounded-full hover:bg-gray-100 dark:hover:bg-gray-700" title="คู่มือการใช้งาน">
+            <i class="fa-solid fa-circle-question text-xl"></i>
+          </button>
+          <!-- Dark Mode Toggle -->
+          <button onclick="toggleDarkMode()" class="text-gray-400 hover:text-yellow-500 p-2 transition rounded-full hover:bg-gray-100 dark:hover:bg-gray-700" title="เปลี่ยนโหมดสี">
+            <i id="darkModeIcon" class="fa-solid fa-moon text-xl"></i>
+          </button>
+          <!-- About -->
+          <button onclick="showAbout()" class="text-gray-400 hover:text-blue-500 p-2 transition rounded-full hover:bg-gray-100 dark:hover:bg-gray-700" title="เกี่ยวกับผู้พัฒนา">
+            <i class="fa-solid fa-circle-info text-xl"></i>
+          </button>
+          <!-- Logout -->
+          <button onclick="logout()" class="text-gray-400 hover:text-red-500 p-2 transition rounded-full hover:bg-gray-100 dark:hover:bg-gray-700" title="ออกจากระบบ">
+            <i class="fa-solid fa-right-from-bracket text-xl"></i>
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="flex-1 overflow-hidden relative">
+
+      <!-- TAB 1: DATA ENTRY -->
+      <div id="entrySection" class="absolute inset-0 flex flex-col p-2 sm:p-4 gap-4 transition-opacity duration-300">
+        <!-- Toolbar -->
+        <div class="flex flex-col sm:flex-row justify-between items-center bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 gap-3">
+          <div class="relative w-full sm:w-1/3">
+            <i class="fa-solid fa-search absolute left-3 top-3 text-gray-400"></i>
+            <input type="text" id="searchInput" placeholder="ค้นหา..." class="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-gray-700 dark:text-white border-0 rounded-lg focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-800">
+          </div>
+          <div class="flex items-center gap-2 flex-wrap justify-end">
+             <!-- Status Badges -->
+             <div class="flex gap-2 text-xs font-medium mr-2">
+              <span class="flex items-center gap-1 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-1 rounded border border-green-100 dark:border-green-800 hidden sm:flex">
+                <div class="w-2 h-2 rounded-full bg-green-500"></div> ครบ: <span id="countComplete">0</span>
+              </span>
+              <span class="flex items-center gap-1 bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded border border-gray-200 dark:border-gray-600 hidden sm:flex">
+                <div class="w-2 h-2 rounded-full bg-gray-400"></div> รวม: <span id="countTotal">0</span>
+              </span>
+            </div>
+            
+            <!-- NEW BUTTON: Criteria Info -->
+            <button onclick="showCriteria()" class="bg-cyan-500 hover:bg-cyan-600 text-white px-3 py-2 rounded-lg font-bold shadow transition text-sm flex items-center gap-1" title="ดูเกณฑ์การประเมิน">
+              <i class="fa-solid fa-list-check"></i> <span class="hidden sm:inline">เกณฑ์</span>
+            </button>
+
+            <!-- Excel Tools -->
+            <button onclick="downloadTemplate()" class="bg-indigo-500 hover:bg-indigo-600 text-white px-3 py-2 rounded-lg font-bold shadow transition text-sm flex items-center gap-1" title="ดาวน์โหลดแบบฟอร์มเปล่าไปกรอก">
+              <i class="fa-solid fa-file-arrow-down"></i> <span class="hidden sm:inline">โหลดฟอร์ม</span>
+            </button>
+            <button onclick="triggerUpload()" class="bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded-lg font-bold shadow transition text-sm flex items-center gap-1" title="อัพโหลดไฟล์คะแนน">
+              <i class="fa-solid fa-file-arrow-up"></i> <span class="hidden sm:inline">อัพโหลด</span>
+            </button>
+            <input type="file" id="scoreUploadInput" accept=".xlsx" class="hidden" onchange="handleFileUpload(this)">
+
+            <!-- Save Button -->
+            <button onclick="saveData()" class="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold shadow transition flex items-center gap-2 text-sm ml-2">
+              <i class="fa-solid fa-save"></i> <span class="hidden sm:inline">บันทึก</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="flex-1 bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col relative">
+          <div class="overflow-auto flex-1">
+            <table class="w-full text-left border-collapse">
+              <thead class="bg-slate-50 dark:bg-gray-700 text-slate-600 dark:text-gray-300 text-xs uppercase font-semibold sticky top-0 z-10 shadow-sm">
+                <tr id="tableHeaderRow"></tr>
+              </thead>
+              <tbody id="studentTableBody" class="divide-y divide-gray-100 dark:divide-gray-700 text-sm"></tbody>
+            </table>
+          </div>
+          <div id="tableLoading" class="hidden absolute inset-0 bg-white/80 dark:bg-gray-900/80 z-20 flex items-center justify-center">
+            <i class="fa-solid fa-circle-notch fa-spin text-blue-500 text-3xl"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: STATISTICS -->
+      <div id="statsSection" class="absolute inset-0 flex flex-col p-2 sm:p-4 gap-4 hidden overflow-y-auto bg-slate-50 dark:bg-gray-900">
+        
+        <!-- Header Actions -->
+        <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex justify-between items-center">
+          <div>
+            <h2 class="text-lg font-bold text-gray-800 dark:text-white" id="statsTitle">สรุปผลการประเมิน</h2>
+            <p class="text-xs text-gray-500 dark:text-gray-400" id="statsSubtitle">ภาพรวมสถิติ</p>
+          </div>
+          <div class="flex gap-2">
+             <!-- ปุ่ม Refresh/Export Admin -->
+             <button id="refreshAdminStatsBtn" onclick="loadAdminStats()" class="hidden bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg font-bold shadow text-sm">
+                <i class="fa-solid fa-rotate-right"></i> รีเฟรช
+             </button>
+             <button id="exportSchoolPdfBtn" onclick="exportSchoolPDF()" class="hidden bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-bold shadow transition flex items-center gap-2">
+               <i class="fa-solid fa-file-pdf"></i> <span class="hidden sm:inline">PDF (โรงเรียน)</span>
+             </button>
+
+             <!-- ปุ่ม Export Current Room -->
+             <button onclick="exportRoomPDF()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-bold shadow transition flex items-center gap-2">
+               <i class="fa-solid fa-file-pdf"></i> <span class="hidden sm:inline">PDF (ห้องนี้)</span>
+             </button>
+             <button onclick="exportToExcel()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-bold shadow transition flex items-center gap-2">
+               <i class="fa-solid fa-file-excel"></i> <span class="hidden sm:inline">Excel</span>
+             </button>
+          </div>
+        </div>
+
+        <!-- ADMIN DASHBOARD TABLE (Shown only to Admin) -->
+        <div id="adminDashboard" class="hidden bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700">
+           <table class="w-full text-left">
+             <thead class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs uppercase">
+               <tr>
+                 <th class="py-3 px-4">ห้อง</th>
+                 <th class="py-3 px-4">ครูประจำชั้น</th>
+                 <th class="py-3 px-4 text-center">นักเรียน (คน)</th>
+                 <th class="py-3 px-4 text-center">บันทึกครบ (คน)</th>
+                 <th class="py-3 px-4 text-center">ความคืบหน้า</th>
+                 <th class="py-3 px-4 text-center">จัดการ</th>
+               </tr>
+             </thead>
+             <tbody id="adminStatsBody" class="divide-y divide-gray-100 dark:divide-gray-700 text-sm"></tbody>
+           </table>
+        </div>
+
+        <!-- SUMMARY TABLE BY CRITERIA -->
+        <div id="summaryTableContainer" class="hidden bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700">
+          <div class="p-4 border-b border-gray-100 dark:border-gray-700 font-bold text-gray-700 dark:text-white flex items-center gap-2">
+            <i class="fa-solid fa-table"></i> ตารางสรุปจำนวนนักเรียนตามระดับคุณภาพ
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+              <thead class="bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-semibold border-b dark:border-gray-600">
+                <tr>
+                  <th class="py-3 px-4">หัวข้อการประเมิน</th>
+                  <th class="py-3 px-4 text-center">คะแนนเต็ม</th>
+                  <th class="py-3 px-4 text-center text-green-600 dark:text-green-400">ดีมาก</th>
+                  <th class="py-3 px-4 text-center text-blue-600 dark:text-blue-400">ดี</th>
+                  <th class="py-3 px-4 text-center text-yellow-600 dark:text-yellow-400">พอใช้</th>
+                  <th class="py-3 px-4 text-center text-red-600 dark:text-red-400">ปรับปรุง</th>
+                  <th class="py-3 px-4 text-center text-gray-400">ยังไม่กรอก/อื่นๆ</th>
+                </tr>
+              </thead>
+              <tbody id="summaryTableBody" class="divide-y divide-gray-100 dark:divide-gray-700"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ROOM CHARTS -->
+        <div id="chartsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-10"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // ================= CONFIGURATION =================
+    const SCRIPT_URL = "นำลิงค์Appscript ที่ดีพลอยมาวางที่นี่"; 
+    
+    // --- PDF CONFIGURATION ---
+    pdfMake.fonts = {
+        THSarabunNew: {
+            normal: 'https://guykorat.github.io/font/THSarabunNew.ttf',
+            bold: 'https://guykorat.github.io/font/Sarabun-ExtraBold.ttf',
+            italics: 'https://guykorat.github.io/font/THSarabunNew.ttf',
+            bolditalics: 'https://guykorat.github.io/font/Sarabun-ExtraBold.ttf'
+        },
+        Charm: {
+            normal: 'https://guykorat.github.io/font/Charm-Bold.ttf',
+            bold: 'https://guykorat.github.io/font/Charm-Regular.ttf',
+        },
+        Prompt: {
+            normal: 'https://guykorat.github.io/font/Prompt-Regular.ttf',
+            bold: 'https://guykorat.github.io/font/Prompt-Bold.ttf',
+        },
+        Roboto: {
+             normal: 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Regular.ttf',
+             bold: 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Medium.ttf',
+             italics: 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Italic.ttf',
+             bolditalics: 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-MediumItalic.ttf'
+        }
+    };
+
+    let appState = {
+      user: null,
+      role: 'teacher',
+      config: [],
+      criteria: {}, 
+      students: [],
+      allRooms: []
+    };
+    let charts = [];
+
+    window.onload = function() { initDarkMode(); }
+
+    function initDarkMode() {
+        const savedMode = localStorage.getItem('theme');
+        if (savedMode === 'dark' || (!savedMode && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+            document.getElementById('darkModeIcon').className = 'fa-solid fa-sun text-xl text-yellow-400';
+        } else {
+            document.documentElement.classList.remove('dark');
+            document.getElementById('darkModeIcon').className = 'fa-solid fa-moon text-xl';
+        }
+    }
+
+    function toggleDarkMode() {
+        const html = document.documentElement;
+        const icon = document.getElementById('darkModeIcon');
+        if (html.classList.contains('dark')) {
+            html.classList.remove('dark');
+            localStorage.setItem('theme', 'light');
+            icon.className = 'fa-solid fa-moon text-xl';
+        } else {
+            html.classList.add('dark');
+            localStorage.setItem('theme', 'dark');
+            icon.className = 'fa-solid fa-sun text-xl text-yellow-400';
+        }
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const btn = document.getElementById('loginBtn');
+      const originalBtnContent = btn.innerHTML;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> กำลังเข้าสู่ระบบ...`;
+      btn.disabled = true;
+
+      try {
+        const response = await fetch(SCRIPT_URL, {
+          method: 'POST',
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({
+            action: 'login',
+            username: document.getElementById('username').value,
+            password: document.getElementById('password').value
+          })
+        });
+
+        const res = await response.json();
+
+        if (res.status === 'success') {
+          appState.user = res.user;
+          appState.role = res.role || 'teacher';
+          appState.config = res.config;
+          appState.students = res.students;
+          appState.criteria = res.criteria || {};
+          
+          if (appState.role === 'admin') {
+            appState.allRooms = res.allRooms;
+            setupAdminUI();
+            loadAdminStats(); 
+          } else {
+            document.getElementById('teacherInfo').innerHTML = `ครู${res.user.name} | <span class="text-blue-600 dark:text-blue-300 bg-blue-50 dark:bg-blue-900 px-1 rounded">ห้อง ${res.user.room}</span>`;
+          }
+          
+          initApp();
+        } else {
+          Swal.fire({ icon: 'error', title: 'Login Failed', text: res.message });
+        }
+      } catch (err) {
+        Swal.fire('Error', err.message, 'error');
+      } finally {
+        btn.innerHTML = originalBtnContent;
+        btn.disabled = false;
+      }
+    }
+
+    function setupAdminUI() {
+      document.getElementById('adminControls').classList.remove('hidden');
+      document.getElementById('roleIcon').className = "bg-purple-600 text-white w-10 h-10 rounded-lg flex items-center justify-center shadow";
+      document.getElementById('roleIcon').innerHTML = '<i class="fa-solid fa-user-shield text-lg"></i>';
+      document.getElementById('teacherInfo').innerHTML = `Administrator Mode`;
+      
+      const selector = document.getElementById('roomSelector');
+      selector.innerHTML = appState.allRooms.map((r, i) => 
+        `<option value="${i}" ${i===0 ? 'selected' : ''}>${r.room} (${r.level}) - ${r.teacher}</option>`
+      ).join('');
+
+      document.getElementById('adminDashboard').classList.remove('hidden');
+      document.getElementById('refreshAdminStatsBtn').classList.remove('hidden');
+      document.getElementById('exportSchoolPdfBtn').classList.remove('hidden');
+      document.getElementById('statsTitle').innerText = "ภาพรวมการบันทึกข้อมูล (Admin)";
+    }
+
+    async function switchRoom(index) {
+      const selected = appState.allRooms[index];
+      document.getElementById('tableLoading').classList.remove('hidden');
+      try {
+        const response = await fetch(SCRIPT_URL, {
+          method: 'POST',
+          body: JSON.stringify({
+            action: 'switchRoom',
+            room: selected.room,
+            level: selected.level
+          })
+        });
+        const res = await response.json();
+        if (res.status === 'success') {
+          appState.config = res.config;
+          appState.students = res.students;
+          appState.criteria = res.criteria;
+          appState.user.room = selected.room; 
+          
+          renderTable();
+          renderCharts();
+          renderSummaryTable();
+        }
+      } catch(err) {
+        Swal.fire('Error', 'ไม่สามารถโหลดข้อมูลห้องได้', 'error');
+      } finally {
+        document.getElementById('tableLoading').classList.add('hidden');
+      }
+    }
+
+    async function loadAdminStats() {
+      if(appState.role !== 'admin') return;
+      const tbody = document.getElementById('adminStatsBody');
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-500 dark:text-gray-400"><i class="fa-solid fa-spinner fa-spin"></i> กำลังโหลดข้อมูลสรุป...</td></tr>';
+      try {
+        const response = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'getAdminStats' }) });
+        const res = await response.json();
+        if (res.status === 'success') {
+          tbody.innerHTML = res.data.map((row, idx) => `
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+              <td class="py-3 px-4 font-bold text-gray-700 dark:text-gray-200">${row.room}</td>
+              <td class="py-3 px-4 text-gray-500 dark:text-gray-400">${row.teacher}</td>
+              <td class="py-3 px-4 text-center font-mono text-gray-600 dark:text-gray-300">${row.total}</td>
+              <td class="py-3 px-4 text-center font-mono text-green-600 dark:text-green-400 font-bold">${row.completed}</td>
+              <td class="py-3 px-4 text-center">
+                 <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2.5">
+                    <div class="bg-blue-600 h-2.5 rounded-full" style="width: ${row.percent}%"></div>
+                 </div>
+                 <span class="text-[10px] text-gray-500 dark:text-gray-400">${row.percent}%</span>
+              </td>
+              <td class="py-3 px-4 text-center">
+                <button onclick="forceSelectRoom('${row.room}')" class="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-xs font-bold border border-blue-200 dark:border-blue-700 px-2 py-1 rounded hover:bg-blue-50 dark:hover:bg-gray-700">ดูข้อมูล</button>
+              </td>
+            </tr>`).join('');
+        }
+      } catch (err) { tbody.innerHTML = `<tr><td colspan="6" class="text-center text-red-500">โหลดไม่สำเร็จ</td></tr>`; }
+    }
+
+    function forceSelectRoom(roomName) {
+      const idx = appState.allRooms.findIndex(r => r.room === roomName);
+      if (idx !== -1) {
+        document.getElementById('roomSelector').value = idx;
+        switchRoom(idx);
+        switchTab('entry');
+      }
+    }
+
+    function initApp() {
+      document.getElementById('loginSection').classList.add('hidden');
+      document.getElementById('appSection').classList.remove('hidden');
+      // Recalculate totals on init to ensure consistency
+      appState.students.forEach((s, idx) => recalculateStudentTotal(idx));
+      
+      renderTable();
+      renderCharts();
+      renderSummaryTable();
+      
+      document.getElementById('searchInput').addEventListener('keyup', (e) => {
+        const term = e.target.value.toLowerCase();
+        const filtered = appState.students.filter(s => s.name.toLowerCase().includes(term) || String(s.id).includes(term));
+        renderTableRows(filtered);
+      });
+    }
+    
+    function switchTab(tabName) {
+      if (tabName === 'entry') {
+        document.getElementById('entrySection').classList.remove('hidden');
+        document.getElementById('statsSection').classList.add('hidden');
+        document.getElementById('tab-entry').className = "px-4 py-1.5 rounded-md text-sm font-bold bg-white dark:bg-gray-600 text-blue-600 dark:text-white shadow-sm transition-all";
+        document.getElementById('tab-stats').className = "px-4 py-1.5 rounded-md text-sm font-bold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-all";
+      } else {
+        document.getElementById('entrySection').classList.add('hidden');
+        document.getElementById('statsSection').classList.remove('hidden');
+        document.getElementById('tab-stats').className = "px-4 py-1.5 rounded-md text-sm font-bold bg-white dark:bg-gray-600 text-blue-600 dark:text-white shadow-sm transition-all";
+        document.getElementById('tab-entry').className = "px-4 py-1.5 rounded-md text-sm font-bold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-all";
+        renderCharts();
+        renderSummaryTable();
+        if(appState.role === 'admin') loadAdminStats();
+      }
+    }
+
+    function renderTable() {
+      buildTableHeaders();
+      renderTableRows(appState.students);
+      updateStats();
+    }
+
+    function buildTableHeaders() {
+      const tr = document.getElementById('tableHeaderRow');
+      let html = `<th class="py-3 px-4 w-12 text-center bg-slate-50 dark:bg-gray-700 border-b dark:border-gray-600">#</th><th class="py-3 px-4 w-48 bg-slate-50 dark:bg-gray-700 border-b dark:border-gray-600">รายชื่อนักเรียน</th>`;
+      appState.config.forEach(c => {
+        html += `<th class="py-3 px-2 text-center bg-slate-50 dark:bg-gray-700 border-b dark:border-gray-600 w-32 min-w-[120px]">
+          <div class="block text-slate-700 dark:text-gray-200 font-semibold">${c.header}</div>
+          <div class="text-[10px] text-slate-400 dark:text-gray-400 font-normal">เต็ม ${c.max} ${c.criteriaId ? `(${c.criteriaId})` : ''}</div>
+        </th>`;
+      });
+      tr.innerHTML = html;
+    }
+
+    function renderTableRows(data) {
+      const tbody = document.getElementById('studentTableBody');
+      tbody.innerHTML = '';
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="${appState.config.length + 2}" class="text-center py-10 text-gray-400">ไม่พบข้อมูล</td></tr>`;
+        return;
+      }
+      data.forEach((student, index) => {
+        const realIndex = appState.students.findIndex(s => s.id === student.id);
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-blue-50/50 dark:hover:bg-gray-700 transition-colors group";
+        
+        let cells = `
+          <td class="py-3 px-4 text-center text-gray-400 text-xs border-r dark:border-gray-700">${index + 1}</td>
+          <td class="py-3 px-4 border-r dark:border-gray-700">
+            <div class="font-bold text-gray-700 dark:text-gray-200">${student.title} ${student.name} ${student.surname}</div>
+            <div class="text-xs text-gray-400">ID: ${student.id}</div>
+          </td>`;
+
+        appState.config.forEach(conf => {
+          const val = student.scores[conf.colIndex] || "";
+          const interp = getInterpretation(val, conf.criteriaId, conf.max);
+          const isTotal = conf.header === 'รวม'; // Check if this is the "Total" column
+          
+          cells += `
+            <td class="p-2 align-top border-r dark:border-gray-700 relative">
+              <div class="flex flex-col gap-1">
+                <input type="number" 
+                  data-student="${realIndex}" 
+                  data-col="${conf.colIndex}"
+                  class="w-full text-center border border-gray-200 dark:border-gray-600 rounded-md py-1 focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 dark:text-white ${isTotal ? 'bg-gray-100 dark:bg-gray-800 font-bold text-blue-600 cursor-not-allowed' : ''}"
+                  placeholder="-" min="0" max="${conf.max}" value="${val}"
+                  ${isTotal ? 'readonly' : ''}
+                  oninput="handleScoreChange(${realIndex}, ${conf.colIndex}, this, ${conf.max}, '${conf.criteriaId}')">
+                <div id="badge-${realIndex}-${conf.colIndex}" class="text-center h-5">${interp.html}</div>
+              </div>
+            </td>`;
+        });
+        tr.innerHTML = cells;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function getInterpretation(val, criteriaId, max) {
+      if (val === "" || val === null) return { html: "", text: "-" };
+      const score = parseFloat(val);
+      if (score > max) return { html: '<span class="text-[10px] text-red-500 font-bold">เกิน</span>', text: "Error" };
+      if (!criteriaId || !appState.criteria[criteriaId]) return { html: '<span class="text-[10px] text-gray-300">-</span>', text: "-" };
+      
+      const match = appState.criteria[criteriaId].find(r => score >= r.min && score <= r.max);
+      if (match) {
+        let color = "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300";
+        if (match.label.includes("ดีมาก")) color = "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 border dark:border-green-800";
+        else if (match.label.includes("ดี")) color = "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 border dark:border-blue-800";
+        else if (match.label.includes("พอใช้")) color = "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300 border dark:border-yellow-800";
+        else if (match.label.includes("ปรับปรุง")) color = "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 border dark:border-red-800";
+        return { html: `<span class="px-2 py-[2px] rounded-full text-[10px] ${color} block truncate border-opacity-50">${match.label}</span>`, text: match.label, label: match.label };
+      }
+      return { html: '<span class="text-[10px] text-gray-400">N/A</span>', text: "N/A" };
+    }
+
+    function handleScoreChange(idx, col, input, max, crit) {
+      const val = input.value;
+      appState.students[idx].scores[col] = val === "" ? null : val;
+      document.getElementById(`badge-${idx}-${col}`).innerHTML = getInterpretation(val, crit, max).html;
+      
+      // Auto-calculate Total
+      recalculateStudentTotal(idx);
+      updateStats();
+    }
+
+    // --- NEW FUNCTION: Auto-calculate Sum ---
+    function recalculateStudentTotal(studentIdx) {
+      const student = appState.students[studentIdx];
+      let total = 0;
+      let totalConfig = null;
+
+      // 1. Find Total Config & Sum others
+      appState.config.forEach(c => {
+        if (c.header === 'รวม') {
+          totalConfig = c;
+        } else {
+          // Sum only numeric values from other columns
+          const val = parseFloat(student.scores[c.colIndex]);
+          if (!isNaN(val)) total += val;
+        }
+      });
+
+      // 2. If Total Column exists, update it
+      if (totalConfig) {
+        // Update State
+        student.scores[totalConfig.colIndex] = total;
+
+        // Update DOM (Input & Badge)
+        const input = document.querySelector(`input[data-student="${studentIdx}"][data-col="${totalConfig.colIndex}"]`);
+        if (input) {
+          input.value = total;
+          const badge = document.getElementById(`badge-${studentIdx}-${totalConfig.colIndex}`);
+          if (badge) {
+            const interp = getInterpretation(total, totalConfig.criteriaId, totalConfig.max);
+            badge.innerHTML = interp.html;
+          }
+        }
+      }
+    }
+
+    function updateStats() {
+      const total = appState.students.length;
+      document.getElementById('countTotal').innerText = total;
+      const complete = appState.students.filter(s => appState.config.every(c => {
+          const val = s.scores[c.colIndex];
+          // Count as complete if not null/empty/undefined. 0 is valid.
+          return val !== null && val !== "" && val !== undefined;
+      })).length;
+      document.getElementById('countComplete').innerText = complete;
+    }
+
+    // ================= 4. SAVE & EXPORT & IMPORT =================
+    async function saveData() {
+      // Validation: Check for incomplete data
+      const totalStudents = appState.students.length;
+      const completeCount = appState.students.filter(s => 
+        appState.config.every(c => {
+           const val = s.scores[c.colIndex];
+           return val !== null && val !== "" && val !== undefined; 
+        })
+      ).length;
+      const incompleteCount = totalStudents - completeCount;
+
+      if (incompleteCount > 0) {
+        const result = await Swal.fire({
+          title: 'แจ้งเตือน',
+          text: `ยังป้อนข้อมูลคะแนนไม่ครบทุกคนในห้อง (ขาด ${incompleteCount} คน) จะบันทึกหรือไม่?`,
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#3085d6',
+          cancelButtonColor: '#d33',
+          confirmButtonText: 'บันทึก',
+          cancelButtonText: 'ยกเลิก'
+        });
+
+        if (!result.isConfirmed) return;
+      }
+
+      const updates = appState.students.map(s => ({ rowIndex: s.rowIndex, scores: s.scores }));
+      Swal.fire({ title: 'กำลังบันทึก...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+      try {
+        const response = await fetch(SCRIPT_URL, {
+          method: 'POST',
+          body: JSON.stringify({
+            action: 'saveScores',
+            room: appState.user.room,
+            data: updates
+          })
+        });
+        const res = await response.json();
+        if(res.status === 'success') Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ!', timer: 1500, showConfirmButton: false });
+        else throw new Error(res.message);
+      } catch(err) { Swal.fire('Error', err.message, 'error'); }
+    }
+    
+    function exportToExcel() {
+       const header = ["ลำดับ", "คำนำหน้า", "ชื่อ", "นามสกุล"];
+       appState.config.forEach(c => { header.push(`${c.header} (คะแนน)`, `${c.header} (แปลผล)`); });
+       
+       const rows = appState.students.map((s, i) => {
+         const row = [i + 1, s.title, s.name, s.surname];
+         appState.config.forEach(c => {
+           const val = s.scores[c.colIndex];
+           const interp = getInterpretation(val, c.criteriaId, c.max);
+           row.push(val === null ? "" : val, interp.text);
+         });
+         return row;
+       });
+
+       const wb = XLSX.utils.book_new();
+       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([header, ...rows]), "Students");
+
+       const summaryHeader = ["หัวข้อการประเมิน", "คะแนนเต็ม", "ดีมาก (คน)", "ดี (คน)", "พอใช้ (คน)", "ปรับปรุง (คน)", "อื่นๆ/ยังไม่กรอก (คน)"];
+       const summaryRows = appState.config.map(c => {
+          const stats = { "ดีมาก": 0, "ดี": 0, "พอใช้": 0, "ปรับปรุง": 0, "other": 0 };
+          appState.students.forEach(s => {
+             const val = s.scores[c.colIndex];
+             const interp = getInterpretation(val, c.criteriaId, c.max);
+             let label = interp.label || "";
+             if (label.includes("ดีมาก")) stats["ดีมาก"]++;
+             else if (label.includes("ดี")) stats["ดี"]++;
+             else if (label.includes("พอใช้")) stats["พอใช้"]++;
+             else if (label.includes("ปรับปรุง")) stats["ปรับปรุง"]++;
+             else stats["other"]++;
+          });
+          return [c.header, c.max, stats["ดีมาก"], stats["ดี"], stats["พอใช้"], stats["ปรับปรุง"], stats["other"]];
+       });
+
+       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([summaryHeader, ...summaryRows]), "Summary");
+       XLSX.writeFile(wb, `Report_${appState.user.room}.xlsx`);
+    }
+
+    function exportRoomPDF() {
+      const tableBody = [];
+      const headerRow = [{ text: '#', style: 'tableHeader', alignment: 'center' }, { text: 'ชื่อ-นามสกุล', style: 'tableHeader', alignment: 'left' }];
+      appState.config.forEach(c => { headerRow.push({ text: c.header + '\n(เต็ม ' + c.max + ')', style: 'tableHeader', alignment: 'center' }); });
+      tableBody.push(headerRow);
+
+      appState.students.forEach((s, i) => {
+        const row = [
+          { text: (i + 1).toString(), alignment: 'center', style: 'tableCell' },
+          { text: `${s.title}${s.name} ${s.surname}`, style: 'tableCell' }
+        ];
+        appState.config.forEach(c => {
+          const val = s.scores[c.colIndex];
+          const interp = getInterpretation(val, c.criteriaId, c.max);
+          row.push({
+            stack: [{ text: val === null ? '-' : val.toString(), bold: true, fontSize: 12 }, { text: val === null ? '' : `(${interp.text})`, fontSize: 10, color: 'gray' }],
+            alignment: 'center', style: 'tableCell'
+          });
+        });
+        tableBody.push(row);
+      });
+
+      const summaryBody = [[
+        { text: 'หัวข้อการประเมิน', style: 'tableHeader' },
+        { text: 'ดีมาก', style: 'tableHeader', fillColor: '#dcfce7' },
+        { text: 'ดี', style: 'tableHeader', fillColor: '#dbeafe' },
+        { text: 'พอใช้', style: 'tableHeader', fillColor: '#fef9c3' },
+        { text: 'ปรับปรุง', style: 'tableHeader', fillColor: '#fee2e2' }
+      ]];
+
+      appState.config.forEach(c => {
+        const stats = { "ดีมาก": 0, "ดี": 0, "พอใช้": 0, "ปรับปรุง": 0 };
+        appState.students.forEach(s => {
+           const interp = getInterpretation(s.scores[c.colIndex], c.criteriaId, c.max);
+           if(interp.label && stats[interp.label] !== undefined) stats[interp.label]++;
+        });
+        summaryBody.push([
+          { text: c.header, style: 'tableCell' },
+          { text: stats['ดีมาก'].toString(), style: 'tableCell', alignment: 'center' },
+          { text: stats['ดี'].toString(), style: 'tableCell', alignment: 'center' },
+          { text: stats['พอใช้'].toString(), style: 'tableCell', alignment: 'center' },
+          { text: stats['ปรับปรุง'].toString(), style: 'tableCell', alignment: 'center' }
+        ]);
+      });
+
+      const docDefinition = {
+        pageOrientation: 'landscape',
+        content: [
+          { text: `รายงานผลการประเมิน ห้อง ${appState.user.room}`, style: 'header' },
+          { text: `ครูประจำชั้น: ${appState.user.name}`, style: 'subheader' },
+          { table: { headerRows: 1, widths: ['auto', 'auto', ...Array(appState.config.length).fill('*')], body: tableBody }, layout: 'lightHorizontalLines' },
+          { text: 'สรุปภาพรวมห้อง', style: 'header', pageBreak: 'before' },
+          { table: { headerRows: 1, widths: ['*', '*', '*', '*', '*'], body: summaryBody }, layout: 'lightHorizontalLines' }
+        ],
+        styles: {
+          header: { fontSize: 18, bold: true, margin: [0, 0, 0, 10], font: 'THSarabunNew' },
+          subheader: { fontSize: 14, margin: [0, 0, 0, 10], font: 'THSarabunNew' },
+          tableHeader: { bold: true, fontSize: 13, color: 'black', fillColor: '#eeeeee', font: 'THSarabunNew' },
+          tableCell: { fontSize: 12, font: 'THSarabunNew' }
+        },
+        defaultStyle: { font: 'THSarabunNew' }
+      };
+      pdfMake.createPdf(docDefinition).download(`RoomReport_${appState.user.room}.pdf`);
+    }
+
+    async function exportSchoolPDF() {
+      Swal.fire({ title: 'กำลังสร้างรายงานภาพรวมทั้งโรงเรียน', html: 'ระบบกำลังดึงข้อมูลทุกห้อง กรุณารอสักครู่... <b>0%</b>', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+      const schoolData = [];
+      const rooms = appState.allRooms;
+      for (let i = 0; i < rooms.length; i++) {
+        const roomInfo = rooms[i];
+        try {
+          const response = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'switchRoom', room: roomInfo.room, level: roomInfo.level }) });
+          const res = await response.json();
+          if (res.status === 'success') schoolData.push({ info: roomInfo, data: res });
+        } catch (err) { console.error("Error fetching room " + roomInfo.room); }
+        Swal.getHtmlContainer().querySelector('b').textContent = `${Math.round(((i + 1) / rooms.length) * 100)}%`;
+      }
+
+      const pdfContent = [
+        { text: 'รายงานสรุปผลการประเมินภาพรวมทั้งโรงเรียน', style: 'header', alignment: 'center' },
+        { text: `ข้อมูล ณ วันที่: ${new Date().toLocaleDateString('th-TH')}`, style: 'subheader', alignment: 'center' }
+      ];
+
+      schoolData.forEach(roomItem => {
+        const roomName = roomItem.info.room;
+        const teacher = roomItem.info.teacher;
+        const config = roomItem.data.config;
+        const students = roomItem.data.students;
+        const criteria = roomItem.data.criteria;
+
+        pdfContent.push({ text: `\nห้อง: ${roomName} (ครู${teacher})`, style: 'roomHeader' });
+        const summaryBody = [[{ text: 'หัวข้อการประเมิน', style: 'tableHeader' }, { text: 'ดีมาก', style: 'tableHeader', alignment: 'center' }, { text: 'ดี', style: 'tableHeader', alignment: 'center' }, { text: 'พอใช้', style: 'tableHeader', alignment: 'center' }, { text: 'ปรับปรุง', style: 'tableHeader', alignment: 'center' }, { text: 'รวม', style: 'tableHeader', alignment: 'center' }]];
+
+        config.forEach(c => {
+          const stats = { "ดีมาก": 0, "ดี": 0, "พอใช้": 0, "ปรับปรุง": 0 };
+          let totalCount = 0;
+          students.forEach(s => {
+             const score = s.scores[c.colIndex];
+             if (score === null || score === "") return;
+             const rules = criteria[c.criteriaId];
+             if (rules) {
+               const numScore = parseFloat(score);
+               const match = rules.find(r => numScore >= r.min && numScore <= r.max);
+               if (match && stats[match.label] !== undefined) { stats[match.label]++; totalCount++; }
+             }
+          });
+          summaryBody.push([{ text: c.header, style: 'tableCell' }, { text: stats['ดีมาก'].toString(), style: 'tableCell', alignment: 'center' }, { text: stats['ดี'].toString(), style: 'tableCell', alignment: 'center' }, { text: stats['พอใช้'].toString(), style: 'tableCell', alignment: 'center' }, { text: stats['ปรับปรุง'].toString(), style: 'tableCell', alignment: 'center' }, { text: totalCount.toString(), style: 'tableCell', alignment: 'center' }]);
+        });
+        pdfContent.push({ table: { headerRows: 1, widths: ['*', 50, 50, 50, 50, 50], body: summaryBody }, layout: 'lightHorizontalLines', margin: [0, 5, 0, 10] });
+      });
+
+      const docDefinition = { content: pdfContent, styles: { header: { fontSize: 20, bold: true, margin: [0, 0, 0, 5], font: 'THSarabunNew' }, subheader: { fontSize: 14, margin: [0, 0, 0, 20], font: 'THSarabunNew' }, roomHeader: { fontSize: 16, bold: true, margin: [0, 10, 0, 5], color: '#1e40af', font: 'THSarabunNew' }, tableHeader: { bold: true, fontSize: 13, fillColor: '#f3f4f6', font: 'THSarabunNew' }, tableCell: { fontSize: 13, font: 'THSarabunNew' } }, defaultStyle: { font: 'THSarabunNew' } };
+      Swal.close();
+      pdfMake.createPdf(docDefinition).download(`SchoolSummary_${new Date().toISOString().slice(0,10)}.pdf`);
+    }
+
+    function downloadTemplate() {
+      const header = ["ID", "No", "Title", "Name", "Surname"];
+      appState.config.forEach(c => { header.push(c.header); });
+      const rows = appState.students.map((s, i) => {
+        const row = [s.id, i + 1, s.title, s.name, s.surname];
+        appState.config.forEach(c => { row.push(s.scores[c.colIndex] === null ? "" : s.scores[c.colIndex]); });
+        return row;
+      });
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([header, ...rows]), "ScoreTemplate");
+      XLSX.writeFile(wb, `Template_${appState.user.room}.xlsx`);
+    }
+
+    function triggerUpload() { document.getElementById('scoreUploadInput').click(); }
+
+    function handleFileUpload(input) {
+      const file = input.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+        jsonData.forEach(row => {
+          const student = appState.students.find(s => s.id == row['ID']);
+          if (student) {
+            appState.config.forEach(conf => {
+              const scoreVal = row[conf.header];
+              if (scoreVal !== undefined && scoreVal !== "") {
+                const numVal = parseFloat(scoreVal);
+                if (!isNaN(numVal) && numVal >= 0 && numVal <= conf.max) student.scores[conf.colIndex] = numVal;
+                else if (numVal > conf.max) student.scores[conf.colIndex] = conf.max;
+              }
+            });
+            // Recalculate total after upload
+            const realIndex = appState.students.indexOf(student);
+            recalculateStudentTotal(realIndex);
+          }
+        });
+        renderTable();
+        input.value = "";
+        Swal.fire({ icon: 'success', title: 'อัพโหลดเสร็จสิ้น', text: `อัพเดทคะแนนแล้ว. กรุณาตรวจสอบความถูกต้องและกดบันทึก`, confirmButtonText: 'ตกลง' });
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function renderSummaryTable() {
+      const tbody = document.getElementById('summaryTableBody');
+      const container = document.getElementById('summaryTableContainer');
+      tbody.innerHTML = '';
+      container.classList.remove('hidden');
+      appState.config.forEach(c => {
+        const stats = { "ดีมาก": 0, "ดี": 0, "พอใช้": 0, "ปรับปรุง": 0, "other": 0 };
+        appState.students.forEach(s => {
+           const interp = getInterpretation(s.scores[c.colIndex], c.criteriaId, c.max);
+           let label = interp.label || "";
+           if (label.includes("ดีมาก")) stats["ดีมาก"]++;
+           else if (label.includes("ดี")) stats["ดี"]++;
+           else if (label.includes("พอใช้")) stats["พอใช้"]++;
+           else if (label.includes("ปรับปรุง")) stats["ปรับปรุง"]++;
+           else stats["other"]++;
+        });
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-gray-50 dark:hover:bg-gray-700";
+        tr.innerHTML = `<td class="py-3 px-4 font-medium text-gray-700 dark:text-gray-200">${c.header}</td><td class="py-3 px-4 text-center text-gray-500 dark:text-gray-400">${c.max}</td><td class="py-3 px-4 text-center font-bold text-green-600 dark:text-green-400 bg-green-50/50 dark:bg-green-900/30">${stats["ดีมาก"]}</td><td class="py-3 px-4 text-center font-bold text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/30">${stats["ดี"]}</td><td class="py-3 px-4 text-center font-bold text-yellow-600 dark:text-yellow-400 bg-yellow-50/50 dark:bg-yellow-900/30">${stats["พอใช้"]}</td><td class="py-3 px-4 text-center font-bold text-red-600 dark:text-red-400 bg-red-50/50 dark:bg-red-900/30">${stats["ปรับปรุง"]}</td><td class="py-3 px-4 text-center text-gray-400">${stats["other"]}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderCharts() {
+       const container = document.getElementById('chartsContainer');
+       container.innerHTML = '';
+       charts.forEach(c => c.destroy());
+       charts = [];
+       appState.config.forEach((conf, index) => {
+          const stats = { 'ดีมาก': 0, 'ดี': 0, 'พอใช้': 0, 'ปรับปรุง': 0 };
+          appState.students.forEach(s => {
+             const interp = getInterpretation(s.scores[conf.colIndex], conf.criteriaId, conf.max);
+             if(interp.label && stats[interp.label] !== undefined) stats[interp.label]++;
+          });
+          const div = document.createElement('div');
+          div.className = "bg-white dark:bg-gray-800 p-4 rounded-xl shadow border border-gray-100 dark:border-gray-700 flex flex-col items-center";
+          div.innerHTML = `<h3 class="font-bold text-gray-700 dark:text-gray-200 mb-2">${conf.header}</h3><div class="h-40 w-full"><canvas id="chart-${index}"></canvas></div>`;
+          container.appendChild(div);
+          charts.push(new Chart(document.getElementById(`chart-${index}`), { type: 'doughnut', data: { labels: Object.keys(stats), datasets: [{ data: Object.values(stats), backgroundColor: ['#22c55e', '#3b82f6', '#eab308', '#ef4444'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 10, color: document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#374151' } } } } }));
+       });
+    }
+    
+    function logout() { location.reload(); }
+    
+    function showAbout() {
+      Swal.fire({
+        title: '<strong class="text-2xl text-blue-700 dark:text-blue-400">เกี่ยวกับโปรแกรม</strong>',
+        html: `<div class="flex flex-col items-center gap-4 mt-4"><div class="w-20 h-20 bg-gradient-to-tr from-blue-500 to-cyan-400 rounded-full flex items-center justify-center shadow-lg animate-bounce"><i class="fa-solid fa-graduation-cap text-4xl text-white"></i></div><div class="text-center text-gray-700 dark:text-gray-300"><h3 class="text-lg font-bold">ระบบบันทึกผลการเรียน (Student Eval)</h3><p class="text-xs text-slate-400 font-mono mb-2">Version 5.0.1 (Stable)</p><div class="bg-blue-50 dark:bg-gray-700 p-4 rounded-xl border border-blue-100 dark:border-gray-600 shadow-inner"><p class="text-sm text-slate-600 dark:text-gray-300 mb-1">พัฒนาโดย</p><p class="text-xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400">[Mr"Waroonporn Rattanabhutchai]</p><p class="text-xs text-slate-500 dark:text-gray-400 mt-2">Full Stack Developer</p></div><p class="text-xs text-gray-400 mt-4"><i class="fa-regular fa-copyright"></i> 2026 All Rights Reserved.<br>Last Updated: February 2026</p></div></div>`,
+        showConfirmButton: false, showCloseButton: true, background: document.documentElement.classList.contains('dark') ? '#1f2937' : '#fff', color: document.documentElement.classList.contains('dark') ? '#f3f4f6' : '#545454', customClass: { popup: 'rounded-2xl shadow-2xl dark:bg-gray-800' }
+      });
+    }
+
+function showHelp() {
+  Swal.fire({
+    title: '<strong class="text-2xl text-blue-700 dark:text-blue-400">คู่มือการใช้งาน</strong>',
+    width: '600px',
+    html: `
+      <div class="space-y-6 text-left mt-4">
+        <div class="flex items-start gap-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
+          <div class="flex-shrink-0 w-12 h-12 bg-blue-500 text-white rounded-full flex items-center justify-center text-xl font-bold shadow-lg">1</div>
+          <div>
+            <h4 class="font-bold text-lg text-gray-800 dark:text-white mb-1"><i class="fa-solid fa-right-to-bracket text-blue-500"></i> เข้าสู่ระบบ</h4>
+            <p class="text-sm text-gray-500 dark:text-gray-300">Login ด้วย Username/Password ที่ได้รับ เพื่อเข้าถึงข้อมูลรายวิชาและห้องเรียนที่รับผิดชอบ</p>
+          </div>
+        </div>
+
+        <div class="flex items-start gap-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
+          <div class="flex-shrink-0 w-12 h-12 bg-green-500 text-white rounded-full flex items-center justify-center text-xl font-bold shadow-lg">2</div>
+          <div>
+            <h4 class="font-bold text-lg text-gray-800 dark:text-white mb-1"><i class="fa-solid fa-keyboard text-green-500"></i> บันทึกคะแนน</h4>
+            <p class="text-sm text-gray-500 dark:text-gray-300">กรอกคะแนนรายบุคคล หรืออัพโหลดไฟล์ Excel ระบบจะ <b>แปลผลอัตโนมัติ</b> ทันที (ดีมาก, ดี, พอใช้)</p>
+          </div>
+        </div>
+
+        <div class="flex items-start gap-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
+          <div class="flex-shrink-0 w-12 h-12 bg-purple-500 text-white rounded-full flex items-center justify-center text-xl font-bold shadow-lg">3</div>
+          <div>
+            <h4 class="font-bold text-lg text-gray-800 dark:text-white mb-1"><i class="fa-solid fa-chart-pie text-purple-500"></i> ตรวจสอบผล</h4>
+            <p class="text-sm text-gray-500 dark:text-gray-300">ไปที่เมนู <b>"สรุป"</b> เพื่อดูกราฟสถิติภาพรวม และตารางสรุปจำนวนนักเรียนตามระดับเกรด</p>
+          </div>
+        </div>
+
+        <div class="flex items-start gap-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
+          <div class="flex-shrink-0 w-12 h-12 bg-orange-500 text-white rounded-full flex items-center justify-center text-xl font-bold shadow-lg">4</div>
+          <div>
+            <h4 class="font-bold text-lg text-gray-800 dark:text-white mb-1"><i class="fa-solid fa-file-export text-orange-500"></i> ส่งออกรายงาน</h4>
+            <p class="text-sm text-gray-500 dark:text-gray-300">กดปุ่ม <b>Export</b> เพื่อดาวน์โหลดรายงานเป็นไฟล์ PDF หรือ Excel สำหรับนำไปใช้งานต่อ</p>
+          </div>
+        </div>
+
+        <div class="pt-2">
+          <a href="https://drive.google.com/file/d/1UtzJDuubNf8qhMUdJL3iIIZwSVZr4KuF/view?usp=sharing" target="_blank" 
+             class="flex items-center justify-center gap-2 w-full p-3 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/50 transition-all font-semibold">
+            <i class="fa-solid fa-file-pdf text-xl"></i>
+            เปิดอ่านคู่มือการใช้งานฉบับเต็ม (PDF)
+          </a>
+        </div>
+      </div>`,
+    showConfirmButton: true,
+    confirmButtonText: 'เข้าใจแล้ว',
+    confirmButtonColor: '#3085d6',
+    background: document.documentElement.classList.contains('dark') ? '#1f2937' : '#fff',
+    color: document.documentElement.classList.contains('dark') ? '#f3f4f6' : '#545454',
+    customClass: {
+      popup: 'rounded-2xl shadow-2xl dark:bg-gray-800'
+    }
+  });
+}
+
+    function showCriteria() {
+      if (!appState.criteria || Object.keys(appState.criteria).length === 0) {
+        Swal.fire({ title: 'ข้อมูล', text: 'ไม่พบข้อมูลเกณฑ์การประเมิน', icon: 'info', background: document.documentElement.classList.contains('dark') ? '#1f2937' : '#fff', color: document.documentElement.classList.contains('dark') ? '#f3f4f6' : '#545454', }); return;
+      }
+      let htmlContent = '<div class="text-left space-y-4 max-h-[60vh] overflow-y-auto p-2">';
+      for (const [id, rules] of Object.entries(appState.criteria)) {
+        const relatedCols = appState.config.filter(c => c.criteriaId === id).map(c => c.header).join(', ');
+        htmlContent += `<div class="border rounded-xl p-3 bg-gray-50 dark:bg-gray-700 dark:border-gray-600 shadow-sm"><h4 class="font-bold text-blue-600 dark:text-blue-400 mb-2 flex justify-between items-center flex-wrap gap-2"><span class="flex items-center gap-1"><i class="fa-solid fa-tag"></i> ${id}</span>${relatedCols ? `<span class="text-[10px] text-gray-500 dark:text-gray-300 font-normal bg-white dark:bg-gray-600 px-2 py-1 rounded border dark:border-gray-500">ใช้กับ: ${relatedCols}</span>` : ''}</h4><div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200"><tr><th class="py-1 px-2 text-center rounded-tl-lg">ช่วงคะแนน</th><th class="py-1 px-2 text-center rounded-tr-lg">ผลการประเมิน</th></tr></thead><tbody class="divide-y divide-gray-200 dark:divide-gray-600 bg-white dark:bg-gray-800">`;
+        const sortedRules = [...rules].sort((a, b) => b.min - a.min);
+        sortedRules.forEach(r => {
+           let badgeColor = "bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-300";
+           if(r.label.includes('ดีมาก')) badgeColor = "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
+           else if(r.label.includes('ดี')) badgeColor = "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
+           else if(r.label.includes('พอใช้')) badgeColor = "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300";
+           else if(r.label.includes('ปรับปรุง')) badgeColor = "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
+           htmlContent += `<tr><td class="py-2 px-2 text-center font-mono dark:text-gray-300 border-r dark:border-gray-700">${r.min} - ${r.max}</td><td class="py-2 px-2 text-center"><span class="px-2 py-0.5 rounded-full text-xs border border-opacity-20 ${badgeColor}">${r.label}</span></td></tr>`;
+        });
+        htmlContent += `</tbody></table></div></div>`;
+      }
+      htmlContent += '</div>';
+      Swal.fire({ title: '<strong class="text-2xl text-cyan-600 dark:text-cyan-400">เกณฑ์การประเมินผล</strong>', html: htmlContent, width: '600px', showCloseButton: true, focusConfirm: false, confirmButtonText: 'ปิด', confirmButtonColor: '#64748b', background: document.documentElement.classList.contains('dark') ? '#1f2937' : '#fff', color: document.documentElement.classList.contains('dark') ? '#f3f4f6' : '#545454', customClass: { popup: 'rounded-2xl shadow-2xl dark:bg-gray-800' } });
+    }
+  </script>
+</body>
+</html>
